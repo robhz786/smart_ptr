@@ -29,10 +29,11 @@ namespace boost {
         shared_ptr<T> s1(p1, d1, a1);
         A1* a2 = static_cast<A1*>(s1._internal_get_untyped_deleter());
         a2->set(0);
+        boost::detail::shared_initializer initializer(s1);
 #if !defined(BOOST_NO_CXX11_ALLOCATOR)
-        boost::detail::as_init(allocator, p2, n1);
+        boost::detail::as_init(initializer, allocator, p2, n1);
 #else
-        boost::detail::ms_init(p2, n1);
+        boost::detail::ms_init(initializer, p2, n1);
 #endif
         a2->set(p2);
         p1 = reinterpret_cast<T1*>(p2);
@@ -57,10 +58,11 @@ namespace boost {
         shared_ptr<T> s1(p1, d1, a1);
         A1* a2 = static_cast<A1*>(s1._internal_get_untyped_deleter());
         a2->set(0);
+        boost::detail::shared_initializer initializer(s1);
 #if !defined(BOOST_NO_CXX11_ALLOCATOR)
-        boost::detail::as_init(allocator, p2, N);
+        boost::detail::as_init(initializer, allocator, p2, N);
 #else
-        boost::detail::ms_init(p2, N);
+        boost::detail::ms_init(initializer, p2, N);
 #endif
         a2->set(p2);
         p1 = reinterpret_cast<T1*>(p2);

@@ -1,0 +1,434 @@
+ <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+    <head>
+        <title>shared_handle</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+    </head>
+    <body text="#000000" bgcolor="#ffffff" link="#0000ff" vlink="#0000ff">
+        <h1><img height="86" alt="boost.png (6897 bytes)" src="../../boost.png"
+            width="277" align="middle" border="0">shared_handle class</h1>
+
+        <p><code>shared_handle</code> class is an alternative to
+          <a href="./enable_shared_from_this.html"><code>enable_shared_from_this</code></a>
+          with some advantanges:
+        </p>
+        <ul>
+          <li>
+            <code>shared_handle</code> can also instantiate a <code>shared_ptr</code>
+            that points to a member object. This can be especially suitable in cyclic
+            references.
+          </li>
+          <li><code>enable_shared_from_this</code> can be cumbersome in some multiple
+            inheritance scenarios: if a class <code>A</code> inherits from
+            <code>enable_shared_from_this&lt;A&gt;</code> and a class <code>B</code>
+            inherits from <code>enable_shared_from_this&lt;B&gt;</code>, then you can't
+            create a class that inherits both from <code>A</code> and <code>B</code>.
+            <code>shared_handle</code> doesn't have this kind of problem.
+          </li>
+          <li>
+            <code>sizeof(shared_handle) &lt; sizeof(enable_shared_from_this&lt;T&gt;)</code>
+            . Although the difference is small. These values are implementation depended,
+            but <code>sizeof(shared_handle)</code> is likely to be equal to
+            <code>sizeof(void*)</code>, while
+            <code>sizeof(enable_shared_from_this&lt;T&gt;)</code> is likely to be
+            the twice of that.
+          </li>
+          <li>
+            <code>shared_handle</code> imposes the use of
+            <a href="make_shared.html"><code>make_shared</code></a> or
+            <a href="make_shared.html"><code>allocate_shared</code></a>
+            , which in turn ensures that the object is aways managed
+            indeed by <code>shared_ptr</code>.
+            This is not necessarily aways an advantage though.
+          </li>
+        </ul>
+
+        On the other hand, <code>shared_handle</code> has the disadvange of being
+        more error prone. Its misuse can lead to dangling pointers.
+
+        <h2>How it works</h2>
+        <p>
+          <code>shared_handle</code> uses a lower level approach than
+          <code>enable_shared_from_this</code>. So it is important to understand
+          exactly what it does in order to avoid your program to run into some
+          undefined ( or catastrophic ) behavior.
+          As you might already know or have deduced, when an object is managed by
+          <code>shared_ptr</code>, there must be some sort of other underlying object
+          that holds the referece counters, the deleter, etc. It is sometimes called
+          as the "control block". A <code>shared_ptr&lt;T&gt;</code> instance
+          internally contains a pointer to the control block and also a pointer
+          to the <code>T</code> instance. The <code>shared_ptr&lt;T&gt;</code>
+          actually never deletes its <code>T</code> pointer. It just requests the
+          control block to increment and decrement the reference counter. And the
+          control block decides when and how to destroy and deallocate the object.
+        </p>
+
+        <p>
+          Well, a <code>shared_handle</code>'s instance is internally just a pointer the
+          control block. The <code>shared_handle::forcibly_assemble_shared_ptr&lt;T&gt;</code>
+          function instantiates a <code>shared_ptr&lt;T&gt;</code> by combining the pointer
+          it takes as argument with the control block this <code>shared_handle</code> is
+          associated with. It is the user's responsability to ensure that such combination
+          is consistent.
+        </p>
+
+        <p>
+          An object obtains its corresponding <code>shared_handle</code> from
+          <a href="make_shared.html"><code>make_shared</code></a> or
+          <a href="make_shared.html"><code>allocate_shared</code></a>.
+          These function templates call the object's constructor passing the
+          <code>shared_handle</code> instance as the first argument, and
+          forward those they receive as the remaining ones.
+        </p>
+
+        <pre>  #include &lt;boost/make_shared.hpp&gt;
+
+  class X
+  {
+  public:
+      typedef void using_boost_shared_handle;
+
+      X(boost::shared_handle hdl): m_hdl(hdl) {}
+
+      boost::shared_ptr&lt;X&gt; f()
+      {
+          return m_hdl.forcibly_assemble_shared_ptr(this);
+      }
+
+  private:
+      boost::shared_handle m_hdl;
+  };
+
+  int main()
+  {
+      boost::shared_ptr&lt;X&gt; p = boost::make_shared&lt;X&gt;();
+      boost::shared_ptr&lt;X&gt; q = p-&gt;f();
+      assert(p == q);
+      assert(!(p &lt; q || q &lt; p)); // p and q must share ownership
+  }</pre>
+
+        <p>
+          Usually, <code>make_shared</code> and <code>allocade_shared</code>
+          are able to correctly decide which constructor to call, <i>i.e.</i>
+          whether they shall or not add the <code>shared_handle</code>
+          to the constructor's argument list. But sometimes this is
+          not possible, like when the constructor is private, or when the
+          compiler does not support some SFINAE tricks.
+          In such cases, to preserve backward compatibilty, the
+          <code>shared_handle</code> argument is not added. Unless the
+          the public member type <code>using_boost_shared_handle</code>
+          is defined, as above. In this case, the
+          <code>shared_handle</code> argument is unconditionally added.
+        </p>
+        <h3>Example with multiple inheritance</h3>
+        <pre>
+  class base_1
+  {
+  public:
+      base_1(boost::shared_handle hdl): m_hdl(hdl) {}
+
+      void in_base_1()
+      {
+          shared_ptr&lt;base_1&gt; sp_this = m_hdl.forcibly_assemble_shared_ptr(this);
+          //...
+      }
+
+  private:
+      boost::shared_handle m_hdl;
+  };
+
+  class base_2
+  {
+  public:
+      base_2(boost::shared_handle hdl): m_hdl(hdl) {}
+
+      void in_base_2()
+      {
+          shared_ptr&lt;base_2&gt; sp_this = m_hdl.forcibly_assemble_shared_ptr(this);
+          // ...
+      }
+
+  private:
+      boost::shared_handle m_hdl;
+  };
+
+
+  class derived: public base_1, public base_2
+  {
+  public:
+      derived(boost::shared_handle hdl):
+          base_1(hdl),
+          base_2(hdl),
+          m_hdl(hdl)
+      {
+      }
+
+      void in_derived()
+      {
+          shared_ptr&lt;derived&gt; sp_this = m_hdl.forcibly_assemble_shared_ptr(this);
+          // ...
+      }
+
+  private:
+      boost::shared_handle m_hdl;
+  };</pre>
+
+        <h3>Composite objects</h3>
+
+        <p>The parameter passed to <code>shared_handle::forcibly_assemble_shared_ptr&lt;T&gt;</code>
+          does not necessarily has to be the <code>this</code> pointer.
+          It could also be a pointer to a composite:
+        </p>
+
+        <pre>
+  #include &lt;boost/make_shared.hpp&gt;
+
+
+  class bar;
+
+  class foo{
+  public:
+      foo(bar&amp; b): m_bar(b) {}
+
+      // ...
+  private:
+      bar&amp; m_bar;
+  };
+
+
+  class bar {
+  public:
+      bar(boost::shared_handle hdl)
+          : m_hdl(hdl)
+          , m_foo(*this)
+      {
+      }
+
+      boost::shared_ptr&lt;foo&gt; get_foo()
+      {
+          return m_hdl.forcibly_assemble_shared_ptr(&amp;m_foo);
+      }
+
+  private:
+      boost::shared_handle m_hdl;
+      foo m_foo;
+  };
+
+
+  int main()
+  {
+
+      boost::shared_ptr&lt;bar&gt; bar_ptr = make_shared&lt;bar&gt;();
+      boost::shared_ptr&lt;foo&gt; foo_ptr = bar_ptr-&gt;get_foo();
+
+      // bar_ptr and foo_ptr associated with the same control block:
+      assert(foo_ptr.use_count() == 2);
+      assert(!(bar_ptr &lt; foo_ptr || bar_ptr &lt; foo_ptr));
+
+      bar_ptr.reset() // But this bar instance is still alive because of foo_ptr.
+      foo_ptr.reset() // Now the bar instace is destoyed, which in turn causes the destruction of this foo instance too.
+
+      return 0;
+  }
+        </pre>
+        <p>
+          We created <code>shared_ptr</code> instances that points to
+          different object but influence the same use count.
+          This is not a problem since these objects will be destroyed
+          together.
+          If this seem strange to you, note that it similar to when
+          you instantiate a <code>shared_ptr&lt;A&gt;</code> from a
+          <code>shared_ptr&lt;B&gt;</code>, where <code>A</code> is
+          a base class of <code>B</code>. The
+          <code>shared_ptr&lt;A&gt;</code> would point to a sub-object
+          of the <code>B</code> instance, that is not very different,
+          in term of memory managment, than in a composition.
+        </p>
+
+        <p>Without <code>shared_handle</code>, the only way to implement
+          the function <code>bar::get_foo()</code> above would be making
+          <code>bar::m_foo</code> a <code>shared_ptr&lt;foo&gt;</code>.
+          That would not only cost an additional memory allocation, but
+          would also permit the composite to be destroyed after the owner,
+          which may be undesirable, especially if the composite references
+          back the owner, as above. And actually, strictly speaking, that
+          could not be called a composition anymore.
+        </p>
+
+        <!--
+        <h3>Pitfalls</h3>
+
+        <p>I thing the warnings below should be obvious at this point.
+          However it's possible that the previous sections don't make
+          things clear enough as I imagine.
+        </p>
+        -->
+
+        <p><mark><strong>&#x26a0; Warning:</strong></mark>
+          Remember, <code>shared_ptr</code> never deletes any pointer.
+          The control block is the one that invokes the deleter,
+          and it deletes only the same pointer as the one held by the
+          <code>shared_ptr</code> that was returned by <code>make_shared</code>.
+
+          Its your responsability to ensure this deletion in turn resolves
+          the destruction and deallocation of the other objects whose address
+          are passed to
+          <code>shared_handle::forcibly_assemble_shared_ptr&lt;T&gt;</code>
+          or to <code>shared_handle::forcibly_assemble_weak_ptr&lt;T&gt;</code>
+        </p>
+<pre>
+  class x { /*...*/ } ;
+
+  class bad {
+  public:
+      bad(boost::shared_handle hdl)
+          : m_hdl(hdl)
+      {
+      }
+
+      boost::shared_ptr&lt;x&gt; get_x()
+      {
+          return m_hdl.forcibly_assemble_shared_ptr(new x()); // bad: memory leak. Who will delete this x ?
+          // You'd rather return boost::make_shared&lt;x&gt;()
+      }
+
+  private:
+      boost::shared_handle m_hdl;
+  };
+</pre>
+
+        <p><mark><strong>&#x26a0; Warning:</strong></mark>
+          It is safe to pass a pointer to a composite to
+          <code>shared_handle::forcibly_assemble_shared_ptr&lt;T&gt;</code>
+          as long as by <em>compositie</em> you mean an object that is
+          destroyed when, and <em>only when</em> its owner is destroyed.
+          You must ensure that the pointers passed to
+          <code>shared_handle::forcibly_assemble_shared_ptr&lt;T&gt;</code>
+          or to <code>shared_handle::forcibly_assemble_weak_ptr&lt;T&gt;</code>
+          will not become dangling before that:
+        </p>
+
+<pre>
+  class x{
+  public:
+      void do_something();
+      //..
+  };
+
+
+  class bad {
+  public:
+      bad(boost::shared_handle hdl)
+          : m_hdl(hdl)
+          , m_x(new x())
+      {}
+
+      boost::shared_ptr&lt;x&gt; get_x()
+      {
+          return m_hdl.forcibly_assemble_shared_ptr(m_x.get());
+      }
+
+      void bad_function()
+      {
+          m_x.clear(); // bad : premature destruction
+      }
+
+  private:
+      boost::shared_handle m_hdl;
+      std::unique_ptr&lt;x&gt; m_x;
+  };
+
+
+  int main()
+  {
+      boost::shared_ptr&lt;bad&gt; bad_object = boost::make_shared&lt;bad&gt;();
+      boost::shared_ptr&lt;x&gt; x_object = bad_object-&gt;get_x();
+
+      bad_object-&gt;bad_function();         // Ops, deleting the x instance.
+
+      x_object-&gt;do_something();           // Accessing dangling pointer !!!
+
+      return 0;
+   }
+</pre>
+        <h2>Supported Compilers</h2>
+
+        <p> In the absence of certain C++11 features, 
+          <code>make_shared</code> and <code>allocate_shared</code>
+          may fail to inject the <code>shared_handle</code> instance.
+         
+          If the compiler does not support either variadic templates
+          or R-value references, then the <code>shared_handle</code> is
+          injected only if the constructor expects no other argument.
+
+          And if <code>decltype</code> or the new C++11 function
+          specification syntax with trailing return type
+          (<code>auto foo() -> decltype(expr);</code>) is not supported,
+          then your class will probably need the
+          <code>using_boost_shared_handle</code>
+          public member type.
+        </p>
+
+        <p> The following compilers have shown to support the comprehensive
+          usage of <code>shared_handle</code>:
+          <ul>
+            <li> Clang 3.2 and above with -std=c++11 option </li>
+            <li> GCC 4.8 and above with -std=c++11 option </li>
+            <li> Visual Studio 14.0 2015 </li>              
+          </ul>
+        </p>
+
+        <hr> <!-- -------------------------------------------------------------- -->
+
+        <h2>Synopsis</h2>
+        <pre>  namespace boost
+  {
+    class shared_handle
+    {
+    public:
+        shared_handle(const shared_handle&amp;) BOOST_NOEXCEPT;
+
+        template &lt;typename T&gt; shared_ptr&lt;T&gt; forcibly_assemble_shared_ptr(T*) const BOOST_NOEXCEPT;
+
+        template &lt;typename T&gt; weak_ptr&lt;T&gt; forcibly_assemble_weak_ptr(T*) const BOOST_NOEXCEPT;
+    };
+  }</pre>
+
+        <h2>Members</h2>
+        <h3>copy constructor</h3>
+        <pre>shared_handle(const shared_handle&amp; hdl) BOOST_NOEXCEPT;</pre>
+        <blockquote>
+          <p><b>Effects:</b> Constructs a <code>shared_handle</code> associated to the same
+            control block
+          <p><b>Throws:</b> nothing.</p>
+        </blockquote>
+
+        <h3>forcibly_assemble_shared_ptr</h3>
+        <pre>template &lt;typename T&gt; shared_ptr&lt;T&gt; forcibly_assemble_shared_ptr(T* p) const BOOST_NOEXCEPT;</pre>
+        <blockquote>
+          <p><b>Returns:</b>
+            On success, returns a <code>shared_ptr&lt;T&gt;</code> that stores <code>p</code> and is
+            associated with the same control block of this <code>shared_handle</code>.
+            On failure return an empty <code>shared_ptr&lt;T&gt;</code>. Failure happens if <code>p</code>
+            is <code>NULL</code> or if it is not possible to increment the use count ( like if the call
+            is done by the destructor of the object that is managed by this control block ).
+          </p>
+          <p><b>Throws:</b> nothing.</p>
+        </blockquote>
+
+        <h3>forcibly_assemble_weak_ptr</h3>
+        <pre>template &lt;typename T&gt; weak_ptr&lt;T&gt; forcibly_assemble_weak_ptr(T* p) const BOOST_NOEXCEPT;</pre>
+        <blockquote>
+          <p><b>Returns:</b>Same as <code>weak_ptr&lt;T&gt;(forcibly_assemble_shared_ptr(p))</code></p>
+          <p><b>Throws:</b> nothing.</p>
+        </blockquote>
+
+        <hr>
+        <p><small>Copyright Roberto Hinz. Distributed under the Boost Software License, Version
+            1.0. See accompanying file <A href="../../LICENSE_1_0.txt">LICENSE_1_0.txt</A> or
+            copy at <A href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</A>.
+          </small>
+        </p>
+
+    </body>
+</html>

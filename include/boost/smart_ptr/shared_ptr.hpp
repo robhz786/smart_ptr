@@ -783,6 +783,8 @@ private:
 
 #endif
 
+    friend class shared_handle;
+
     element_type * px;                 // contained pointer
     boost::detail::shared_count pn;    // reference counter
 

@@ -16,7 +16,7 @@
 #include <boost/move/core.hpp>
 #include <boost/move/utility_core.hpp>
 #include <boost/smart_ptr/shared_ptr.hpp>
-#include <boost/smart_ptr/detail/sp_forward.hpp>
+#include <boost/smart_ptr/detail/shared_initializer.hpp>
 #include <boost/type_traits/type_with_alignment.hpp>
 #include <boost/type_traits/alignment_of.hpp>
 #include <cstddef>
@@ -252,8 +252,9 @@ template< class T, class... Args > typename boost::detail::sp_if_not_array< T >:
     boost::detail::sp_ms_deleter< T > * pd = static_cast<boost::detail::sp_ms_deleter< T > *>( pt._internal_get_untyped_deleter() );
 
     void * pv = pd->address();
+    boost::detail::shared_initializer initializer(pt);
+    initializer.construct(static_cast< T* >( pv ), boost::detail::sp_forward<Args>( args )... );
 
-    ::new( pv ) T( boost::detail::sp_forward<Args>( args )... );
     pd->set_initialized();
 
     T * pt2 = static_cast< T* >( pv );
@@ -275,6 +276,8 @@ template< class T, class A, class... Args > typename boost::detail::sp_if_not_ar
 
 #else
 
+    A a2( a );
+
     typedef boost::detail::sp_ms_deleter< T > D;
 
     boost::shared_ptr< T > pt( static_cast< T* >( 0 ), boost::detail::sp_inplace_tag<D>(), a );
@@ -283,16 +286,8 @@ template< class T, class A, class... Args > typename boost::detail::sp_if_not_ar
 
     D * pd = static_cast< D* >( pt._internal_get_untyped_deleter() );
     void * pv = pd->address();
-
-#if !defined( BOOST_NO_CXX11_ALLOCATOR )
-
-    std::allocator_traits<A2>::construct( a2, static_cast< T* >( pv ), boost::detail::sp_forward<Args>( args )... );
-
-#else
-
-    ::new( pv ) T( boost::detail::sp_forward<Args>( args )... );
-
-#endif
+    boost::detail::shared_initializer initializer( pt );
+    initializer.construct( a2, static_cast< T* >( pv ), boost::detail::sp_forward<Args>( args )... );
 
     pd->set_initialized();
 
@@ -314,7 +309,7 @@ template< class T > typename boost::detail::sp_if_not_array< T >::type make_shar
 
     void * pv = pd->address();
 
-    ::new( pv ) T();
+    boost::detail::shared_initializer( pt ).construct( static_cast< T* >( pv ) );
     pd->set_initialized();
 
     T * pt2 = static_cast< T* >( pv );
@@ -331,7 +326,7 @@ template< class T, class A > typename boost::detail::sp_if_not_array< T >::type 
 
     void * pv = pd->address();
 
-    ::new( pv ) T();
+    boost::detail::shared_initializer( pt ).construct( static_cast< T* >( pv ) );
     pd->set_initialized();
 
     T * pt2 = static_cast< T* >( pv );

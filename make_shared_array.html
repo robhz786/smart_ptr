@@ -129,14 +129,17 @@ template&lt;class U, class A&gt;
           is <code>T</code>.</p>
         <p>When a subobject of non-array type <code>T</code> is specified to 
           be value-initialized, <code>make_shared</code> shall perform this 
-          initialization via the expression <code>::new(ptr) T()</code>, where 
-          <code>ptr</code> has type <code>void*</code> and points to storage 
-          suitable to hold an object of type <code>T</code>.</p>
+          initialization via the expression <code>::new(ptr) T()</code>, or
+          <code>::new(ptr) T(hdl)</code>, where ptr has type
+          <code>void*</code> and points to storage suitable to hold an
+          object of type <code>T</code>, and <code>hdl</code> is an instace
+          of <a href="shared_handle.html"><code>shared_handle</code></a>.          
         <p>When a subobject of non-array type <code>T</code> is specified to 
           be value-initialized, <code>allocate_shared</code> shall perform 
           this initialization via the expression
-          <code>allocator_traits&lt;A2&gt;::construct(a2, ptr)</code>, where 
-          <code>ptr</code> points to storage suitable to hold an object 
+          <code>allocator_traits&lt;A2&gt;::construct(a2, ptr)</code> or,
+          <code>allocator_traits&lt;A2&gt;::construct(a2, hdl, ptr)</code>
+          where <code>ptr</code> points to storage suitable to hold an object 
           of type <code>T</code> and <code>a2</code> of type A2 is a rebound 
           copy of the allocator <code>allocator</code> passed to
           <code>allocate_shared</code> such that its <code>value_type</code> 

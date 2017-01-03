@@ -76,16 +76,25 @@
 template&lt;class T, class A, class... Args&gt;
     shared_ptr&lt;T&gt; allocate_shared( A const &amp; a, Args &amp;&amp; ... args );</pre>
         <blockquote>
-            <p><b>Requires:</b> The expression <code>new( pv ) T( std::forward&lt;Args&gt;(args)... )</code>,
+            <p><b>Requires:</b> Either the expression
+                <code>new( pv ) T( std::forward&lt;Args&gt;(args)... )</code> 
+                or <code>new( pv ) T( hdl, std::forward&lt;Args&gt;(args)... )</code>,
                 where <code>pv</code> is a <code>void*</code> pointing to storage suitable
-                to hold an object of type <code>T</code>,
+                to hold an object of type <code>T</code>, and <code>hdl</code> is a 
+                <a href="shared_handle.html"><code>shared_handle</code></a>,
                 shall be well-formed.  <code>A</code> shall be an <em>Allocator</em>,
                 as described in section 20.1.5 (<strong>Allocator requirements</strong>) of the C++ Standard.
                 The copy constructor and destructor of <code>A</code> shall not throw.</p>
-            <p><b>Effects:</b> Allocates memory suitable for an object of type <code>T</code>
-                and constructs an object in it via the placement new expression <code>new( pv ) T()</code>
-                or <code>new( pv ) T( std::forward&lt;Args&gt;(args)... )</code>.
-                <code>allocate_shared</code> uses a copy of <code>a</code> to allocate memory.
+            <p><b>Effects:</b> Allocates memory via the expression <code>a2.allocate(1)</code>
+                and constructs an object in it via the expression <code>std::allocator_traits<!--
+                -->&lt;A2&gt;::construct( a2, pv, std::forward&lt;Args&gt;(args)... )</code> or
+                <code>std::allocator_traits&lt;A2&gt;::construct( a2, pv, hdl, std::forward<!--
+                -->&lt;Args&gt;(args)... )</code>, where <code>a2</code> is &mdash; in case of
+                <code>allocate_shared</code> &mdash; an instance of <code>std::allocator_traits<!--
+                -->&lt;A&gt;::rebind_alloc&lt;T&gt</code> constructed from <code>a</code>,
+                or &mdash; in case of <code>make_shared</code> &mdash; an instance of
+                <code>std::allocator&lt;T&gt;</code>, and  <code>A2</code> is the type of
+                <code>a</code>.
                 If an exception is thrown, has no effect.</p>
             <p><b>Returns:</b> A <code>shared_ptr</code> instance that stores and owns the address
                 of the newly constructed object of type <code>T</code>.</p>

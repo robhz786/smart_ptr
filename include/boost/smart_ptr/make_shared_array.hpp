@@ -28,7 +28,8 @@ namespace boost {
         shared_ptr<T> s1(p1, d1, a1);
         A1* a2 = static_cast<A1*>(s1._internal_get_untyped_deleter());
         a2->set(0);
-        boost::detail::ms_init(p2, n1);
+        boost::detail::shared_initializer initializer(s1);
+        boost::detail::ms_init(initializer, p2, n1);
         a2->set(p2);
         p1 = reinterpret_cast<T1*>(p2);
         return shared_ptr<T>(s1, p1);
@@ -51,7 +52,8 @@ namespace boost {
         shared_ptr<T> s1(p1, d1, a1);
         A1* a2 = static_cast<A1*>(s1._internal_get_untyped_deleter());
         a2->set(0);
-        boost::detail::ms_init(p2, N);
+        boost::detail::shared_initializer initializer(s1);
+        boost::detail::ms_init(initializer, p2, N);
         a2->set(p2);
         p1 = reinterpret_cast<T1*>(p2);
         return shared_ptr<T>(s1, p1);

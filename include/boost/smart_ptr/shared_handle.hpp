@@ -21,7 +21,7 @@ public:
     }
 
     template< typename T >
-    boost::weak_ptr< T > reinterpret_as_weak_ptr( T* ptr )  const BOOST_NOEXCEPT
+    boost::weak_ptr< T > forcibly_assemble_weak_ptr( T* ptr )  const BOOST_NOEXCEPT
     {
         boost::weak_ptr< T > wptr;
         if(ptr != 0) 
@@ -33,7 +33,7 @@ public:
     }
 
     template< typename T >
-    boost::shared_ptr< T > reinterpret_as_shared_ptr( T* ptr ) const BOOST_NOEXCEPT
+    boost::shared_ptr< T > forcibly_assemble_shared_ptr( T* ptr ) const BOOST_NOEXCEPT
     {
         boost::shared_ptr< T > sptr;
         if(ptr != 0) 

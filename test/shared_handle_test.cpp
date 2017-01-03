@@ -122,7 +122,7 @@ public:
     alloc_without_construct()
     {
     }
-    template< class Y > alloc_without_construct( alloc_without_construct<Y> const & r)
+    template< class Y > alloc_without_construct( alloc_without_construct<Y> const & )
     {
     }
     T * allocate( std::size_t n )
@@ -133,7 +133,7 @@ public:
     {
         return allocate(n);
     }
-    void deallocate( T * p, std::size_t n )
+    void deallocate( T * p, std::size_t )
     {
         ::operator delete( p );
     }
@@ -165,7 +165,7 @@ public:
 
     boost::shared_ptr<with_public_ctor> shared_from_this()
     {
-        return m_hdl.reinterpret_as_shared_ptr(this);
+        return m_hdl.forcibly_assemble_shared_ptr(this);
     }
 
     int value()
@@ -195,12 +195,12 @@ public:
 
     boost::shared_ptr<with_private_ctor> shared_from_this()
     {
-        return m_hdl.reinterpret_as_shared_ptr(this);
+        return m_hdl.forcibly_assemble_shared_ptr(this);
     }
 
     boost::shared_ptr<const with_private_ctor> shared_from_this() const
     {
-        return m_hdl.reinterpret_as_shared_ptr(this);
+        return m_hdl.forcibly_assemble_shared_ptr(this);
     }
 
     int value()

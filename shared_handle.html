@@ -180,7 +180,7 @@
         </p>
 
         <pre>
-  #include &lt;boost/make_shared.hpp&gt
+  #include &lt;boost/make_shared.hpp&gt;
 
 
   class bar;
@@ -236,10 +236,10 @@
           This is not a problem since these objects will be destroyed
           together.
           If this seem strange to you, note that it similar to when
-          you instantiate a <code>shared_ptr&lt;A&gt</code> from a
-          <code>shared_ptr&lt;B&gt</code>, where <code>A</code> is
+          you instantiate a <code>shared_ptr&lt;A&gt;</code> from a
+          <code>shared_ptr&lt;B&gt;</code>, where <code>A</code> is
           a base class of <code>B</code>. The
-          <code>shared_ptr&lt;A&gt</code> would point to a sub-object
+          <code>shared_ptr&lt;A&gt;</code> would point to a sub-object
           of the <code>B</code> instance, that is not very different,
           in term of memory managment, than in a composition.
         </p>
@@ -387,7 +387,7 @@
 
         <h2>Members</h2>
         <h3>copy constructor</h3>
-        <pre>shared_handle(const shared_handle& hdl) BOOST_NOEXCEPT;</pre>
+        <pre>shared_handle(const shared_handle&amp; hdl) BOOST_NOEXCEPT;</pre>
         <blockquote>
           <p><b>Effects:</b> Constructs a <code>shared_handle</code> associated to the same
             control block

@@ -230,7 +230,7 @@ int with_private_ctor::instances = 0;
 template <class T1, class T2>
 bool share_ownership(const boost::shared_ptr<T1>& p1, const boost::shared_ptr<T2>& p2)
 {
-    return !(p1 < p2) && !(p2 < p2);
+    return !(p1 < p2) && !(p2 < p1);
 }
 
 struct no_args_tag {};

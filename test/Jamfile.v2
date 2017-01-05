@@ -88,6 +88,8 @@ import testing ;
           [ run allocate_shared_construct11_test.cpp ]
           [ run sp_interlocked_test.cpp ]
           [ run shared_handle_test.cpp ]
+          [ run shared_handle_in_constructor_test.cpp ]
+          [ run shared_handle_in_destructor_test.cpp ] 
 
           [ compile-fail array_fail_spa_sp_c.cpp ]
           [ compile-fail array_fail_sp_spa_c.cpp ]
